@@ -157,5 +157,5 @@ resource "aws_s3" "golden-ami" {
         Name = "golden-ami-s3-bucket"
     }
 
-    data "aws_caller_identity current {}
+    data "aws_caller_identity current" {}
 } 
