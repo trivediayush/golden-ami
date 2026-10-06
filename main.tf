@@ -159,3 +159,126 @@ resource "aws_s3" "golden-ami" {
 
     data "aws_caller_identity current" {}
 } 
+
+resource "aws_s3_bucket_ownership_controls" "golden-ami" {
+  bucket = aws_s3_bucket.golden-ami.id
+
+  rule {
+    object_ownership = "BucketOwnerEnforced"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "golden-ami" {
+  bucket = aws_s3_bucket.golden-ami.id
+
+  block_public_acls = true
+  block_public_policy = true
+  ignore_public_acls = true
+  restrict_public_buckets = true
+}
+
+resource "aws_iam_role" "imagebuilder_instance" {
+  name = "ImageBuilderInstanceRole"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+      {
+        Effect = "Allow"
+
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  tags = {
+    Name = "EC2ImageBuilderInstanceRole"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "imagebuilder_instance"{
+  role = aws_iam_role.imagebuilder_instance.name
+  policy_arn = "arn:aws:iam::aws:policy/EC2InstanceProfileForImageBuilder"
+}
+
+resource "aws_iam_role_policy_attachment" "ssm_managed_instance" {
+  role = aws_iam_role.imagebuilder_instance.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+resource "aws_iam_instance_profile" "imagebuilder" {
+  name = "EC2ImageBuilderInstanceProfile"
+  role = aws_iam_role.imagebuilder_instance.name
+
+  tags = {
+    Name = "ImageBuilderInstaceProfile" 
+  }
+}
+
+resource "aws_iam_role_policy" "imagebuilder_s3" {
+  name = "ImageBuilderS3LogUpload"
+  role = aws_iam_role.imagebuilder_instance.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+      {
+        Sid = "ImageBuilderS3Access"
+        Effect = "Allow"
+
+        Action = [
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:GetBucketLocation"
+        ]
+
+        Resource = [
+          aws_s3_bucket.golden_ami.arn,
+          "${aws_s3_bucket.golden_ami.arn}/*"
+        ]
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role" "imagebuilder_execution" {
+  name = "EC2ImageBuilderExecutionRole"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+      {
+        Effect = "Allow"
+
+        Principal = {
+          Service = "imagebuilder.amazonaws.com"
+        }
+
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  tags = {
+    Name = "ImageBuilderExecutionRole"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "imagebuilder_execution" {
+  role = aws_iam_role.imagebuilder_execution.name
+  policy_arn = "arn:aws:iam::aws:policy/EC2ImageBuilderFullAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "imagebuilder_execution" {
+  role = aws_iam_role.imagebuilder_execution.name
+  policy_arn = "arn:aws:ian::aws:policy/service-role/EC2ImageBuilderExecutionPolicy"
+}
+
+C
