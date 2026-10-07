@@ -3,6 +3,11 @@ output "private_subnet_id" {
   value       = aws_subnet.private.id
 }
 
+output "public_subnet_id" {
+  description = "ID of the public subnet used by the Golden AMI Auto Scaling group."
+  value       = aws_subnet.public.id
+}
+
 output "security_group_id" {
   description = "ID of the security group used by Image Builder."
   value       = aws_security_group.golden-sg.id

@@ -29,3 +29,12 @@ module "imagebuilder" {
   instance_profile_name = module.iam.instance_profile_name
   ssm_parameter_name    = module.iam.ssm_parameter_name
 }
+
+module "autoscaling" {
+  source             = "./modules/autoscaling"
+  aws_region         = var.aws_region
+  account_id         = data.aws_caller_identity.current.account_id
+  public_subnet_id   = module.network.public_subnet_id
+  security_group_id  = module.network.security_group_id
+  ssm_parameter_name = module.iam.ssm_parameter_name
+}
